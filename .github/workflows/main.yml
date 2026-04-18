@@ -1,5 +1,8 @@
-name: APK-OTOMATIK-TAMIR-VE-RELEASER
-on: [push, pull_request, workflow_dispatch]
+name: APK-RELEASER-FINAL
+on: [push, workflow_dispatch]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -7,37 +10,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Spec Dosyasini Duvara Yapistir (BOSLUKLARI SIL)
+      - name: Spec Tamiri ve Bosluk Temizligi
         run: |
-          # Satirin başindaki tüm boşluklari ve # işaretlerini temizler, duvara yapistirir
+          # buildozer.spec içindeki o meşhur boşluğu ve lisans hatasını otomatik çözer
           sed -i 's/^[[:space:]#]*android.accept_sdk_license.*/android.accept_sdk_license = True/' buildozer.spec
-          echo "Spec dosyasi cerrahi hassasiyetle tamir edildi!"
+          sed -i 's/^[[:space:]#]*p4a.branch.*/p4a.branch = master/' buildozer.spec
 
-      - name: Java Hazirla
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Kutuphaneleri Kur
+      - name: Sistem Paketleri ve Java
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libffi-dev libssl-dev python3-dev zip unzip libtinfo5 libncurses5
           pip install --user --upgrade buildozer Cython==0.29.33 virtualenv
           export PATH=$PATH:$HOME/.local/bin
 
-      - name: APK DERLE (ARTIK HATASIZ)
+      - name: Java 17 Kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: APK Derle (Broken Pipe Engelleyici)
         run: |
           export PATH=$PATH:$HOME/.local/bin
+          # Log akışını canlı tutmak için -v (verbose) kullanıyoruz
           yes | buildozer -v android debug
 
-      - name: APK'YI RELEASES KISMINA FIRLAT
+      - name: APK'yi Releases Kismine Yukle
         uses: softprops/action-gh-release@v1
+        if: success()
         with:
           files: bin/*.apk
           tag_name: v${{ github.run_number }}
           name: Yilan Oyunu APK v${{ github.run_number }}
-          body: Boşluk hatasi giderildi, APK taze taze hazirlandi!
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
