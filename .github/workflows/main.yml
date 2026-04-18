@@ -1,4 +1,4 @@
-name: APK-RELEASER-FINAL
+name: APK-HATA-AVCISI
 on: [push, workflow_dispatch]
 
 permissions:
@@ -10,32 +10,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Spec Tamiri ve Bosluk Temizligi
+      - name: Spec Dosyasini Cerrahi Olarak Onar
         run: |
-          # buildozer.spec içindeki o meşhur boşluğu ve lisans hatasını otomatik çözer
+          # Satir basindaki tüm görünmez bosluklari ve hatalari siler
+          sed -i 's/^[[:space:]]*//' buildozer.spec
           sed -i 's/^[[:space:]#]*android.accept_sdk_license.*/android.accept_sdk_license = True/' buildozer.spec
           sed -i 's/^[[:space:]#]*p4a.branch.*/p4a.branch = master/' buildozer.spec
 
-      - name: Sistem Paketleri ve Java
+      - name: Java ve Paketleri Kur
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libffi-dev libssl-dev python3-dev zip unzip libtinfo5 libncurses5
           pip install --user --upgrade buildozer Cython==0.29.33 virtualenv
           export PATH=$PATH:$HOME/.local/bin
 
-      - name: Java 17 Kur
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: APK Derle (Broken Pipe Engelleyici)
+      - name: APK DERLE (HER DETAYI YAZDIR)
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # Log akışını canlı tutmak için -v (verbose) kullanıyoruz
-          yes | buildozer -v android debug
+          # Log seviyesini 2 yaparak hatanin neden 4. dakikada geldigini gorecegiz
+          yes | buildozer -v android debug --loglevel=2
 
-      - name: APK'yi Releases Kismine Yukle
+      - name: Basariliysa Release Yap
         uses: softprops/action-gh-release@v1
         if: success()
         with:
